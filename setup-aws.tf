@@ -11,6 +11,7 @@ variable "avail-zone" {}
 variable "env-prefix" {}
 variable instance-type {}
 variable public-key {}
+variable private-key {}
 
 #--Create VPC
 resource "aws_vpc" "test-terra-vpc" {
@@ -111,6 +112,35 @@ resource "aws_instance" "name" {
   availability_zone = var.avail-zone
   associate_public_ip_address = true
   key_name = aws_key_pair.ssh-key.key_name
+  
+#--conection to host remotly and runnung some script  
+#-- provisioner is not recomended
+  # connection {
+  #   type = "ssh"
+  #   host = self.public_ip
+  #   user = "ec2-user"
+  #   private_key = "${file(var.private-key)}"
+  # }
+
+#--remotly execute command in instance
+  
+  # provisioner "remote-exec" {
+  #   inline = [
+  #     "export ENV=dev",
+  #     "mkdir new-folder"
+  #   ]
+  # }
+#-- copy file from local to remote instance
+  # provisioner "file" {
+  #   source = "entry-script.sh"
+  #   destination = "/home/ec2-user/entry-script-on-ec2.sh"
+  # }
+
+#-ecxecute commands on local machine
+  # provisioner "local-exec" {
+  #   command = "echo ${self.public_ip} > pub-ip.txt"
+  # }
+
 
 #--Describe user data/script to be ran at start of instance
 
@@ -124,16 +154,16 @@ resource "aws_instance" "name" {
 
 #-- user data/script as a input file 
 
-user_data = file("entry-script.sh")
+#user_data = file("entry-script.sh")
 
   tags = {
     Name = "${var.env-prefix}-instance"
   }
 }
 
-# output "public-ip" {
-#   value = aws_instance.name.public_ip
-# }
+output "public-ip" {
+  value = aws_instance.name.public_ip
+}
 
 #--Create KEY-PAIR
 
@@ -141,3 +171,4 @@ resource "aws_key_pair" "ssh-key" {
   key_name = "global-1"
   public_key = "${file(var.public-key)}"
 }
+
