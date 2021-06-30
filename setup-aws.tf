@@ -1,26 +1,28 @@
 #--Create VPC
-resource "aws_vpc" "test-terra-vpc" {
-  cidr_block = var.vpc-cidr-block
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "my-vpc"
+  cidr = var.vpc-cidr-block
+
+  azs             = [var.avail-zone]
+  public_subnets  = [var.subnet-cidr-block]
+  public_subnet_tags = {
+    Name = "${var.env-prefix}-subnet"
+  }
   tags = {
-    "Name" = "${var.env-prefix}-vpc"
+    Name = "${var.env-prefix}-vpc"
   }
 }
 
-module "myapp-subnet" {
-  source = "./modules/subnets"
-  vpc-id = aws_vpc.test-terra-vpc.id
-  avail-zone = var.avail-zone
-  env-prefix = var.env-prefix
-  subnet-cidr-block = var.subnet-cidr-block
-}
+
 
 module "myapp-server" {
   source = "./modules/webserver"
-   vpc-id =  aws_vpc.test-terra-vpc.id
+   vpc-id =  module.vpc.vpc_id
    avail-zone = var.avail-zone
    env-prefix = var.env-prefix
    public-key =  var.public-key
    instance-type = var.instance-type
-   subnet-id = module.myapp-subnet.subnet.id 
-
+   subnet-id = module.vpc.public_subnets[0]
 }
