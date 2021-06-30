@@ -1,8 +1,10 @@
+#--Declare provider
 provider "aws" {
     region= "us-east-1"
     profile="help"
 }
 
+#--Declare variables to keep this to local user as .tfvars file is ignored
 variable "vpc-cidr-block" {}
 variable "subnet-cidr-block" {}
 variable "avail-zone" {}
@@ -10,7 +12,7 @@ variable "env-prefix" {}
 variable instance-type {}
 variable public-key {}
 
-
+#--Create VPC
 resource "aws_vpc" "test-terra-vpc" {
   cidr_block = var.vpc-cidr-block
   tags = {
@@ -18,7 +20,7 @@ resource "aws_vpc" "test-terra-vpc" {
   }
 }
 
-
+#--Create SUBNET
 resource "aws_subnet" "test-terra-subnet" {
   vpc_id = aws_vpc.test-terra-vpc.id
   cidr_block = var.subnet-cidr-block
@@ -28,6 +30,7 @@ resource "aws_subnet" "test-terra-subnet" {
   }
 }
 
+#--Create SECURITY GROUP
 resource "aws_security_group" "test-terra-sg" {
   name        = "All traffic"
   description = "Allow all traffic"
@@ -54,6 +57,7 @@ resource "aws_security_group" "test-terra-sg" {
   }
 }
 
+#--Create INTERNET GATEWAY
 resource "aws_internet_gateway" "test-terra-igw" {
   vpc_id = aws_vpc.test-terra-vpc.id
 
@@ -62,7 +66,7 @@ resource "aws_internet_gateway" "test-terra-igw" {
   }
 }
 
-
+#--Create ROUTE TABLE
 resource "aws_route_table" "test-terra-rt" {
   vpc_id = aws_vpc.test-terra-vpc.id
   
@@ -76,12 +80,13 @@ resource "aws_route_table" "test-terra-rt" {
   }
 }
 
+#--Create RT ASSOCIATION
 resource "aws_route_table_association" "test-terra-rt-assoc" {
   subnet_id = aws_subnet.test-terra-subnet.id
   route_table_id = aws_route_table.test-terra-rt.id
 }
 
-
+#--get always updated ami id of a linux 
 data "aws_ami" "latest-linux-ami" {
   most_recent = true
   owners = ["amazon"]
@@ -91,10 +96,13 @@ data "aws_ami" "latest-linux-ami" {
   }
 }
 
+#--Output instance id
+
 # output "test-instance" {
 #   value = data.aws_ami.latest-linux-ami.id
 # }
 
+#--Create EC2 INSTANCE
 resource "aws_instance" "name" {
   ami = data.aws_ami.latest-linux-ami.id
   security_groups = [aws_security_group.test-terra-sg.id]
@@ -104,6 +112,8 @@ resource "aws_instance" "name" {
   associate_public_ip_address = true
   key_name = aws_key_pair.ssh-key.key_name
 
+#--Describe user data/script to be ran at start of instance
+
   # user_data = <<EOF
   #                 #!/bin/bash
   #                 sudo yum update -y && sudo yum install -y docker
@@ -111,6 +121,8 @@ resource "aws_instance" "name" {
   #                 sudo usermod -aG docker ec2-user
   #                 docker run -itd -p 8080:80 nginx
   #             EOF
+
+#-- user data/script as a input file 
 
 user_data = file("entry-script.sh")
 
@@ -122,6 +134,8 @@ user_data = file("entry-script.sh")
 # output "public-ip" {
 #   value = aws_instance.name.public_ip
 # }
+
+#--Create KEY-PAIR
 
 resource "aws_key_pair" "ssh-key" {
   key_name = "global-1"
